@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<android.support.constraint.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="usbserial.cz.com.tpmsreader.MainActivity">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <TableLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="match_parent">
+
+                <Button
+                    android:id="@+id/btScanUsbDevices"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="scan usb devices"
+                    android:text="scan usb devices"
+                    tools:text="scan usb devices" />
+
+                <Button
+                    android:id="@+id/btClearResults"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Clear scan results" />
+
+                <Button
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Button" />
+
+            </TableRow>
+
+            <TableRow
+                android:layout_width="wrap_content"
+                android:layout_height="211dp">
+
+                <EditText
+                    android:id="@+id/etScanResults"
+                    android:layout_width="wrap_content"
+                    android:layout_height="220dp"
+                    android:layout_span="4"
+                    android:ems="10"
+                    android:enabled="true"
+                    android:inputType="textMultiLine"
+                    android:scrollbars="vertical" />
+            </TableRow>
+
+            <TableRow
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <ListView
+                    android:id="@+id/lvDevices"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_span="4" />
+            </TableRow>
+
+        </TableLayout>
+    </LinearLayout>
+</android.support.constraint.ConstraintLayout>
