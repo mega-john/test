@@ -35,6 +35,7 @@ import usbserial.cz.com.tpmsreader.Driver.SerialInputOutputManager;
 import usbserial.cz.com.tpmsreader.Driver.UsbSerialDriver;
 import usbserial.cz.com.tpmsreader.Driver.UsbSerialPort;
 import usbserial.cz.com.tpmsreader.Driver.UsbSerialProber;
+import usbserial.cz.com.tpmsreader.util.Tools;
 
 import static usbserial.cz.com.tpmsreader.util.Tools.bytesToHexString;
 import static usbserial.cz.com.tpmsreader.util.Tools.sum;
@@ -61,7 +62,19 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private final SerialInputOutputManager.Listener mListener = new SerialTPMSListener();
     public static final int P_UNIT = 2;
     public static final int LT_PROGRESS_STATAR = 10;
+    private static final int MESSAGE_DATA = 105;
     private static final int MESSAGE_HANDSHAKE_NO = 107;
+    private static final int MESSAGE_HANDSHAKE_OK = 106;
+    private static final int MESSAGE_USB_CONNECT = 103;
+    private static final int MESSAGE_USB_OPEN_FAIL = 101;
+    private static final int MESSAGE_USB_OPEN_OK = 102;
+    private static final int MESSAGE_VOICE_SPEK = 104;
+    private static final int MESSAGE_WARN_HIGH_TIRE_PRESSURE = 110;
+    private static final int MESSAGE_WARN_HIGH_TIRE_TEMPERATURE = 111;
+    private static final int MESSAGE_WARN_LOW_BATTERY = 112;
+    private static final int MESSAGE_WARN_LOW_TIRE_PRESSURE = 109;
+    private static final int MESSAGE_WARN_NO_RF_SIGNAL = 113;
+    private static final int MESSAGE_WARN_TIRE_LEAK = 108;
     public static Handler mHandlerSeriaTest = null;
     public static Handler mHandler = null;
     private Timer mTimerHandShake = null;
@@ -78,6 +91,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static int HandShakeTotal = 120;
     private int f533j;
     private static byte time = (byte) 0;
+    Context mContext = this;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -86,13 +100,13 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mUsbManager = (UsbManager) getSystemService(Context.USB_SERVICE);
         mEntries = new ArrayList();
 
-        mPermissionIntent = PendingIntent.getBroadcast(this, 0, new Intent(ACTION_USB_PERMISSION), 0);
+        mPermissionIntent = PendingIntent.getBroadcast(mContext, 0, new Intent(ACTION_USB_PERMISSION), 0);
         IntentFilter filter = new IntentFilter(ACTION_USB_PERMISSION);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_ATTACHED);
         filter.addAction(UsbManager.ACTION_USB_DEVICE_DETACHED);
         filter.addAction(UsbManager.EXTRA_PERMISSION_GRANTED);
         filter.addAction(ACTION_USB_PERMISSION);
-        registerReceiver(mUsbReceiver, filter);
+        mContext.registerReceiver(mUsbReceiver, filter);
         initView();
         etScanResults.clearFocus();
     }
@@ -146,7 +160,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 return;
         }
     }
-
 
     private void ClearScanResults() {
         etScanResults.setText("");
@@ -231,30 +244,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     if (DEBUG) {
                         etScanResults.append("Error openDevice:  connection " + connection);
                     }
-//                    if (mHandler != null) {
-//                        mHandler.sendEmptyMessage(MESSAGE_USB_OPEN_FAIL);
-//                        return;
-//                    }
+                    if (mHandler != null) {
+                        mHandler.sendEmptyMessage(MESSAGE_USB_OPEN_FAIL);
+                        return;
+                    }
                     return;
                 }
                 try {
                     this.sPort.open(connection);
                     try {
                         this.sPort.setParameters(19200, 8, 1, 0);
-//                        if (mHandler != null) {
-//                            mHandler.sendEmptyMessage(MESSAGE_USB_OPEN_OK);
-//                        }
+                        if (mHandler != null) {
+                            mHandler.sendEmptyMessage(MESSAGE_USB_OPEN_OK);
+                        }
                         if (this.sPort != null) {
-//                            try {
-//                                String versionName = Tools.getVersionName(this.mContext);
-//                                VERS_INFO = new StringBuilder(String.valueOf(versionName)).append(" ").append(this.sPort.getClass().getSimpleName()).toString();
-//                            } catch (IOException e2) {
-//                                e2.printStackTrace();
-//                                Log.e(TAG, "Error Tools.getVersionName: " + e2.getMessage(), e2);
-//                            } catch (Exception e) {
-//                                e.printStackTrace();
-//                                Log.e(TAG, "Error Tools.getVersionName: " + e.getMessage(), e);
-//                            }
+                            try {
+                                String versionName = Tools.getVersionName(this.mContext);
+                                VERS_INFO = new StringBuilder(String.valueOf(versionName)).append(" ").append(this.sPort.getClass().getSimpleName()).toString();
+                            } catch (IOException e2) {
+                                e2.printStackTrace();
+                                etScanResults.append("Error Tools.getVersionName: " + e2.getMessage());
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                etScanResults.append("Error Tools.getVersionName: " + e.getMessage());
+                            }
                         }
                         onDeviceStateChange();
                     } catch (Exception e22) {
@@ -268,9 +281,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         } catch (Exception e3) {
                         }
                         this.sPort = null;
-//                        if (mHandler != null) {
-//                            mHandler.sendEmptyMessage(MESSAGE_USB_OPEN_FAIL);
-//                        }
+                        if (mHandler != null) {
+                            mHandler.sendEmptyMessage(MESSAGE_USB_OPEN_FAIL);
+                        }
 
                     }
                 } catch (Exception e23) {
@@ -376,7 +389,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private boolean isDataWarn(byte[] b) {
         if (DEBUG) {
-            Log.e(TAG, "cz  isDataWarn  " + bytesToHexString(b));
+            etScanResults.append( "cz  isDataWarn  " + bytesToHexString(b));
         }
         if (b[0] != (byte) 85 || b[1] != (byte) -86) {
             return false;
@@ -701,10 +714,10 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             sendMessage(mHandlerSeriaTest, buff);
         }
         if (DEBUG && buff != null) {
-            Log.v(TAG, "cz1 buff " + bytesToHexString(buff) + " len " + buff.length);
+            etScanResults.append( "cz1 buff " + bytesToHexString(buff) + " len " + buff.length);
         }
         if (buff == null) {
-            Log.e(TAG, "cz2 buff null " + bytesToHexString(buff) + " len " + buff.length);
+            etScanResults.append( "cz2 buff null " + bytesToHexString(buff) + " len " + buff.length);
         } else if (buff.length > 3 && buff[0] == (byte) 85 && buff[1] == (byte) -86 && buff.length >= buff[P_UNIT] && isDataBoolean(buff, buff[P_UNIT])) {
             if (mHandler != null) {
                 sendMessage(mHandler, buff);
@@ -730,7 +743,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         } else {
             if (buff.length < 20 && buf_temp.length > this.buf_temp_len + buff.length) {
                 if (DEBUG) {
-                    Log.i(TAG, "cz44 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len);
+                    etScanResults.append( "cz44 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len);
                 }
                 temp = getMergeBytes(buf_temp, this.buf_temp_len, buff, buff.length);
                 for (i = 0; i < temp.length; i++) {
@@ -738,11 +751,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
                 this.buf_temp_len = temp.length;
                 if (DEBUG) {
-                    Log.i(TAG, "cz44--- buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len + " temp.length " + temp.length);
+                    etScanResults.append( "cz44--- buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len + " temp.length " + temp.length);
                 }
             }
             if (DEBUG) {
-                Log.i(TAG, "cz5 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len);
+                etScanResults.append( "cz5 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len);
             }
             i = 0;
             while (i < this.buf_temp_len) {
@@ -754,7 +767,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             this.buf_len = this.buf_temp_len;
             if (DEBUG) {
-                Log.i(TAG, "cz5-- buf " + bytesToHexString(buf) + "  buf_len " + this.buf_len);
+                etScanResults.append( "cz5-- buf " + bytesToHexString(buf) + "  buf_len " + this.buf_len);
             }
             this.data_head_falg = false;
             this.f533j = 0;
@@ -768,7 +781,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 i++;
             }
             if (DEBUG) {
-                Log.i(TAG, "cz556-- " + this.data_head_falg + " buf " + bytesToHexString(buf) + "  i " + i);
+                etScanResults.append( "cz556-- " + this.data_head_falg + " buf " + bytesToHexString(buf) + "  i " + i);
             }
             if (this.data_head_falg) {
                 this.f533j = 0;
@@ -784,11 +797,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 this.buf_temp_len = this.f533j;
             }
             if (DEBUG) {
-                Log.i(TAG, "cz--77 " + this.data_head_falg + " buf " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len);
+                etScanResults.append( "cz--77 " + this.data_head_falg + " buf " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len);
             }
             if (this.buf_temp_len < buf_temp.length - 10 && this.buf_temp_len > 5 && this.data_head_falg && this.buf_temp_len >= buf_temp[P_UNIT] && isDataBoolean(buf_temp, buf_temp[P_UNIT])) {
                 if (DEBUG) {
-                    Log.i(TAG, "cz6 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len + "  len " + buf_temp[P_UNIT]);
+                    etScanResults.append( "cz6 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len + "  len " + buf_temp[P_UNIT]);
                 }
                 byte[] b = new byte[buf_temp[P_UNIT]];
                 for (byte y = (byte) 0; y < buf_temp[P_UNIT]; y++) {
@@ -820,7 +833,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
                 isDataWarn(b);
                 if (DEBUG) {
-                    Log.v(TAG, "cz7 buf_temp " + bytesToHexString(b));
+                    etScanResults.append( "cz7 buf_temp " + bytesToHexString(b));
                 }
             }
             if (this.buf_temp_len > buf_temp.length - 2) {
@@ -880,7 +893,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 return;
             }
             if (DEBUG) {
-                Log.e(TAG, "HandShakeCount " + HandShakeCount + " " + time);
+                etScanResults.append( "HandShakeCount " + HandShakeCount + " " + time);
             }
             try {
                 byte[] bArr = new byte[6];
