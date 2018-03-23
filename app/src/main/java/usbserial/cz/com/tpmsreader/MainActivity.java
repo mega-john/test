@@ -75,6 +75,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private static final int MESSAGE_WARN_LOW_TIRE_PRESSURE = 109;
     private static final int MESSAGE_WARN_NO_RF_SIGNAL = 113;
     private static final int MESSAGE_WARN_TIRE_LEAK = 108;
+
+    private static final String MESSAGE_1 = "Runner stopped.\n";
+
     public static Handler mHandlerSeriaTest = null;
     public static Handler mHandler = null;
     private Timer mTimerHandShake = null;
@@ -109,17 +112,30 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mContext.registerReceiver(mUsbReceiver, filter);
         initView();
         etScanResults.clearFocus();
+        mHandler = new Handler() {
+            public void handleMessage(Message msg) {
+
+                switch (msg.what) {
+                    case 666:
+                        etScanResults.append(String.valueOf(msg.obj));
+                        break;
+                    default:
+                        break;
+                }
+
+            }
+        };
     }
 
     private void initView() {
-        btScanUsbDevices = (Button) findViewById(R.id.btScanUsbDevices);
+        btScanUsbDevices = findViewById(R.id.btScanUsbDevices);
         btScanUsbDevices.setOnClickListener(this);
-        btClearResults = (Button) findViewById(R.id.btClearResults);
+        btClearResults = findViewById(R.id.btClearResults);
         btClearResults.setOnClickListener(this);
-        etScanResults = (EditText) findViewById(R.id.etScanResults);
+        etScanResults = findViewById(R.id.etScanResults);
 //        etScanResults.setInputType(InputType.TYPE_NULL);
         etScanResults.setKeyListener(null);
-        lvDevices = (ListView) findViewById(R.id.lvDevices);
+        lvDevices = findViewById(R.id.lvDevices);
         lvDevices.setOnItemClickListener(this);
         listViewAdapter = new SimpleAdapter(this,
                 listViewItems,
@@ -133,14 +149,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         if (mEntries == null || mEntries.size() <= 0) {
-            etScanResults.append("usb devices list empty!!!");
+            etScanResults.append("usb devices list empty!!!\n");
+            showConsoleActivity(null);
             return;
         }
         UsbSerialPort port = mEntries.get(position);
         if (port != null) {
             showConsoleActivity(port);
         } else {
-            etScanResults.append("selected UsbSerialPort is null!!!");
+            etScanResults.append("selected UsbSerialPort is null!!!\n");
         }
     }
 
@@ -183,7 +200,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         mEntries.clear();
 
         etScanResults.append("find all usb devices :\n");
-        HashMap<String, String> map = new HashMap<>();
+        HashMap<String, String> map;
+        map = new HashMap<>();
+        map.put("Name", "test name");
+        map.put("ID", "test ID");
+        listViewItems.add(map);
 
         etScanResults.append("find usb devices by filter:\n");
 
@@ -217,12 +238,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         if (this.sPort != null) {
             UsbSerialDriver driver = this.sPort.getDriver();
             if (driver == null) {
-                etScanResults.append("this.sPort.getDriver() returns null!");
+                etScanResults.append("this.sPort.getDriver() returns null!\n");
                 return;
             }
             UsbDevice device = driver.getDevice();
             if (device == null) {
-                etScanResults.append("driver.getDevice() returns null!");
+                etScanResults.append("driver.getDevice() returns null!\n");
                 return;
             }
             if (0 < device.getInterfaceCount()) {
@@ -242,7 +263,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                     this.sPort = null;
                     if (DEBUG) {
-                        etScanResults.append("Error openDevice:  connection " + connection);
+                        etScanResults.append("Error openDevice:  connection " + null + "\n");
                     }
                     if (mHandler != null) {
                         mHandler.sendEmptyMessage(MESSAGE_USB_OPEN_FAIL);
@@ -260,19 +281,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         if (this.sPort != null) {
                             try {
                                 String versionName = Tools.getVersionName(this.mContext);
-                                VERS_INFO = new StringBuilder(String.valueOf(versionName)).append(" ").append(this.sPort.getClass().getSimpleName()).toString();
-                            } catch (IOException e2) {
-                                e2.printStackTrace();
-                                etScanResults.append("Error Tools.getVersionName: " + e2.getMessage());
+                                VERS_INFO = String.valueOf(versionName) + " " + this.sPort.getClass().getSimpleName();
                             } catch (Exception e) {
                                 e.printStackTrace();
-                                etScanResults.append("Error Tools.getVersionName: " + e.getMessage());
+                                etScanResults.append("Error Tools.getVersionName: " + e.getMessage() + "\n");
                             }
                         }
                         onDeviceStateChange();
                     } catch (Exception e22) {
                         if (DEBUG) {
-                            etScanResults.append("Error setting up device: " + e22.getMessage());
+                            etScanResults.append("Error setting up device: " + e22.getMessage() + "\n");
                         }
                         try {
                             if (this.sPort != null) {
@@ -288,15 +306,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                     }
                 } catch (Exception e23) {
                     if (DEBUG) {
-                        etScanResults.append("cz open device: " + e23.getMessage());
+                        etScanResults.append("cz open device: " + e23.getMessage() + "\n");
                     }
                 }
             } else {
                 if (DEBUG) {
-                    etScanResults.append("permission denied for device ");
+                    etScanResults.append("permission denied for device " + "\n");
                 }
                 this.mUsbManager.requestPermission(this.sPort.getDriver().getDevice(), mPermissionIntent);
             }
+        } else {
+            //debug purposes only
+            startIoManager();
         }
     }
 
@@ -307,7 +328,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void stopIoManager() {
         if (mSerialIoManager != null) {
-            etScanResults.append("Stopping io manager ..");
+            etScanResults.append("Stopping io manager .." + "\n");
             mSerialIoManager.stop();
             mSerialIoManager = null;
         }
@@ -315,10 +336,16 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void startIoManager() {
         if (this.sPort != null) {
-            etScanResults.append("Starting io manager ..");
+            etScanResults.append("Starting io manager .." + "\n");
+            mSerialIoManager = new SerialInputOutputManager(this.sPort, this.mListener);
+            this.mExecutor.submit(mSerialIoManager);
+        } else {
+            //debug purposes only
+            etScanResults.append("Starting io manager ..(debug)" + "\n");
             mSerialIoManager = new SerialInputOutputManager(this.sPort, this.mListener);
             this.mExecutor.submit(mSerialIoManager);
         }
+
     }
 
     public void writeData(byte[] data) {
@@ -328,12 +355,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             } catch (Exception e) {
             }
             if (DEBUG) {
-                etScanResults.append( "cz writeAsync " + bytesToHexString(data));
+                etScanResults.append("cz writeAsync " + bytesToHexString(data) + "\n");
                 return;
             }
             return;
         }
-        etScanResults.append("cz writeAsync mSerialIoManager =null ");
+        etScanResults.append("cz writeAsync mSerialIoManager =null " + "\n");
     }
 
     private void sendMessage(Handler mHandler, byte[] data) {
@@ -366,10 +393,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         for (int i = 1; i < len - 1; i++) {
             sum = (byte) (buff[i] ^ sum);
         }
-        if (sum == buff[len - 1]) {
-            return true;
-        }
-        return false;
+        return sum == buff[len - 1];
     }
 
     private void startTimerHandShake() {
@@ -381,15 +405,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
-    void setTimeNsHandShake(long dalayms) {
+    void setTimeNsHandShake(long delayMs) {
         if (this.mTimerHandShake != null && this.mTimerTaskHandShake != null) {
-            this.mTimerHandShake.schedule(this.mTimerTaskHandShake, dalayms * 1000, 1000 * dalayms);
+            this.mTimerHandShake.schedule(this.mTimerTaskHandShake, delayMs * 1000, 1000 * delayMs);
         }
     }
 
     private boolean isDataWarn(byte[] b) {
         if (DEBUG) {
-            etScanResults.append( "cz  isDataWarn  " + bytesToHexString(b));
+            etScanResults.append("cz  isDataWarn  " + bytesToHexString(b) + "\n");
         }
         if (b[0] != (byte) 85 || b[1] != (byte) -86) {
             return false;
@@ -709,15 +733,15 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void dealData(byte[] buff) {
         int len = buff.length / LT_PROGRESS_STATAR;
-        int i=0;
+        int i = 0;
         if (mHandlerSeriaTest != null) {
             sendMessage(mHandlerSeriaTest, buff);
         }
         if (DEBUG && buff != null) {
-            etScanResults.append( "cz1 buff " + bytesToHexString(buff) + " len " + buff.length);
+            etScanResults.append("cz1 buff " + bytesToHexString(buff) + " len " + buff.length + "\n");
         }
         if (buff == null) {
-            etScanResults.append( "cz2 buff null " + bytesToHexString(buff) + " len " + buff.length);
+            etScanResults.append("cz2 buff null " + bytesToHexString(buff) + " len " + buff.length + "\n");
         } else if (buff.length > 3 && buff[0] == (byte) 85 && buff[1] == (byte) -86 && buff.length >= buff[P_UNIT] && isDataBoolean(buff, buff[P_UNIT])) {
             if (mHandler != null) {
                 sendMessage(mHandler, buff);
@@ -743,7 +767,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         } else {
             if (buff.length < 20 && buf_temp.length > this.buf_temp_len + buff.length) {
                 if (DEBUG) {
-                    etScanResults.append( "cz44 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len);
+                    etScanResults.append("cz44 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len + "\n");
                 }
                 temp = getMergeBytes(buf_temp, this.buf_temp_len, buff, buff.length);
                 for (i = 0; i < temp.length; i++) {
@@ -751,11 +775,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
                 this.buf_temp_len = temp.length;
                 if (DEBUG) {
-                    etScanResults.append( "cz44--- buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len + " temp.length " + temp.length);
+                    etScanResults.append("cz44--- buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len + " temp.length " + temp.length + "\n");
                 }
             }
             if (DEBUG) {
-                etScanResults.append( "cz5 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len);
+                etScanResults.append("cz5 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len + "\n");
             }
             i = 0;
             while (i < this.buf_temp_len) {
@@ -767,7 +791,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
             }
             this.buf_len = this.buf_temp_len;
             if (DEBUG) {
-                etScanResults.append( "cz5-- buf " + bytesToHexString(buf) + "  buf_len " + this.buf_len);
+                etScanResults.append("cz5-- buf " + bytesToHexString(buf) + "  buf_len " + this.buf_len + "\n");
             }
             this.data_head_falg = false;
             this.f533j = 0;
@@ -781,7 +805,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 i++;
             }
             if (DEBUG) {
-                etScanResults.append( "cz556-- " + this.data_head_falg + " buf " + bytesToHexString(buf) + "  i " + i);
+                etScanResults.append("cz556-- " + this.data_head_falg + " buf " + bytesToHexString(buf) + "  i " + i + "\n");
             }
             if (this.data_head_falg) {
                 this.f533j = 0;
@@ -797,11 +821,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 this.buf_temp_len = this.f533j;
             }
             if (DEBUG) {
-                etScanResults.append( "cz--77 " + this.data_head_falg + " buf " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len);
+                etScanResults.append("cz--77 " + this.data_head_falg + " buf " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len + "\n");
             }
             if (this.buf_temp_len < buf_temp.length - 10 && this.buf_temp_len > 5 && this.data_head_falg && this.buf_temp_len >= buf_temp[P_UNIT] && isDataBoolean(buf_temp, buf_temp[P_UNIT])) {
                 if (DEBUG) {
-                    etScanResults.append( "cz6 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len + "  len " + buf_temp[P_UNIT]);
+                    etScanResults.append("cz6 buf_temp " + bytesToHexString(buf_temp) + "  buf_temp_len " + this.buf_temp_len + "  len " + buf_temp[P_UNIT] + "\n");
                 }
                 byte[] b = new byte[buf_temp[P_UNIT]];
                 for (byte y = (byte) 0; y < buf_temp[P_UNIT]; y++) {
@@ -833,7 +857,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 }
                 isDataWarn(b);
                 if (DEBUG) {
-                    etScanResults.append( "cz7 buf_temp " + bytesToHexString(b));
+                    etScanResults.append("cz7 buf_temp " + bytesToHexString(b) + "\n");
                 }
             }
             if (this.buf_temp_len > buf_temp.length - 2) {
@@ -845,19 +869,36 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         }
     }
 
+    private void sendAsyncTextMessage(String s)
+    {
+        if (mHandler != null) {
+            Message m = new Message();
+            m.what = 666;
+            m.obj = s;
+            mHandler.sendMessage(m);
+        }
+    }
+
     class SerialTPMSListener implements SerialInputOutputManager.Listener {
         SerialTPMSListener() {
         }
 
         public void onRunError(Exception e) {
             if (DEBUG) {
-                etScanResults.append("Runner stopped.");
+                sendAsyncTextMessage("Runner stopped.\n");
+//                try {
+//                    etScanResults.append("Runner stopped." + "\n");
+//                } catch (Exception ex) {
+
+//                    etScanResults.append("Runner stopped." + ex.getMessage()+"\n");
+//                }
+
             }
         }
 
         public void onNewData(byte[] data) {
             if (DEBUG) {
-                etScanResults.append("cz onNewData" + bytesToHexString(data));
+                sendAsyncTextMessage("cz onNewData" + bytesToHexString(data) + "\n");
             }
             dealData(data);
             try {
@@ -893,7 +934,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 return;
             }
             if (DEBUG) {
-                etScanResults.append( "HandShakeCount " + HandShakeCount + " " + time);
+                etScanResults.append("HandShakeCount " + HandShakeCount + " " + time + "\n");
             }
             try {
                 byte[] bArr = new byte[6];
